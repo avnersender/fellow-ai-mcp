@@ -1,19 +1,19 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-`server.ts` contains the entire Model Context Protocol server: tool registration, resource templates, and the Axios client used to talk to Fellow. Compiled JavaScript lives in `dist/` after a build, and should never be edited directly. `tsconfig.json` keeps the compiler on ES2022 modules with strict type checking and only includes `server.ts`. `package.json` defines the build/start scripts and lists the small dependency surface (`@modelcontextprotocol/sdk`, `axios`, `zod`); `package-lock.json` should remain committed to pin versions.
+The TypeScript entry point lives in `server.ts`, which registers all Model Context Protocol tools and shared helpers. Tests reside in `tests/` and mirror server features via `*.test.ts` files run by Vitest. Runtime build artifacts compile to `dist/` through the TypeScript compiler; never edit them manually. Support utilities and smoke checks are under `scripts/`, including the live API verifier.
 
 ## Build, Test, and Development Commands
-Run `npm install` once to pull dependencies. `npm run build` transpiles TypeScript via `tsc`, refreshing `dist/server.js`. Launch the MCP server with `FELLOW_SUBDOMAIN=<team> FELLOW_API_KEY=<token> npm start`; the binary reads from stdio, so use an MCP-compatible client to exercise it. For rapid iterations, `npx tsc --watch` keeps recompiling while you edit.
+Run `npm install` once to sync dependencies. `npm run build` transpiles TypeScript to `dist/` using `tsc`. `npm start` executes `dist/server.js` for local agent validation (requires env vars below). `npm test` runs the Vitest suite in watchless mode. `npm run live-check` hits the Fellow API with the configured credentials to ensure transport parity.
 
 ## Coding Style & Naming Conventions
-Match the existing two-space indentation, trailing commas where legal, and single quotes. Favor concise, descriptive tool IDs using snake_case (e.g. `sync_meetings`) and camelCase for variables/functions. Keep environment-specific constants in the config block at the top of `server.ts`, and co-locate helper utilities near the tools that consume them. Type all inputs/outputs with `zod` schemas to enforce validation at the edge.
+Stick to strict TypeScript with ES2022 modules; keep two-space indentation and trailing commas per existing code. Export helpers with descriptive camelCase names (`call`, `fetchNoteById`) and group schemas near their tools. Avoid console output on stdio transports; propagate errors instead. `tsconfig.json` enforces `strict` typing—resolve any new compile warnings before committing.
 
 ## Testing Guidelines
-There is no automated test suite yet; rely on TypeScript’s strict mode plus manual validation. Always run `npm run build` before opening a PR to catch type regressions. When adding or modifying tools, start the server with test credentials and confirm each tool’s happy-path and error-path responses through your MCP client (capture request payloads and structured responses for the PR). Consider adding lightweight integration harnesses under a future `tests/` directory if recurring manual flows appear.
+Write Vitest specs beside related features in `tests/`, naming files `<subject>.test.ts`. Prefer `describe` blocks that mirror tool names and include regression cases for API retries and pagination. Mock outbound HTTP via `vi.mock('axios')` patterns already present. Always run `npm test` before opening a pull request and add coverage for new failure paths.
 
 ## Commit & Pull Request Guidelines
-With no shared history, default to Conventional Commits (`feat: add agenda search tool`, `fix: handle 429 backoff jitter`). Keep commits focused and include context about upstream Fellow endpoints touched. PRs should explain the change, document required environment variables or new scopes, list manual verification steps, and include screenshots or captured responses when they clarify behavior. Link to any tracking issues and flag breaking changes prominently.
+Follow Conventional Commit prefixes observed in history (`fix:`, `test:`, `chore:`) and use present-tense summaries under 72 characters. Each PR should link relevant Fellow issues, describe user-facing changes, and note any new env requirements. Confirm `npm test` and, when credentials allow, `npm run live-check`, and attach outputs or screenshots when behavior changes.
 
-## Environment & Security Notes
-Never commit secrets. Load `FELLOW_SUBDOMAIN` and `FELLOW_API_KEY` through your shell or an `.env.local` excluded from git. Avoid writing debug output to stdout/stderr—throw errors instead so MCP clients surface them cleanly.
+## Environment & Secrets
+Set `FELLOW_SUBDOMAIN` and `FELLOW_API_KEY` in your shell or `.env.local` before running builds or live checks; never commit secrets. For CI or shared environments, use scoped API keys and rotate them after debugging sessions.
