@@ -135,6 +135,21 @@ describe('list_notes tool', () => {
       vi.useRealTimers();
     }
   });
+
+  test('propagates upstream errors', async () => {
+    const tool = getTool('list_notes');
+    const error = new Error('boom');
+    requestMock.mockRejectedValue(error);
+
+    await expect(
+      tool.callback({
+        include_content_markdown: false,
+        include_event_attendees: false,
+        page_size: 1,
+        max_pages: 1,
+      })
+    ).rejects.toThrow('boom');
+  });
 });
 
 describe('list_recordings tool', () => {
