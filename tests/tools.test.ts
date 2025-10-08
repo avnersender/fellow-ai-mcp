@@ -33,318 +33,124 @@ function getTool(name: string) {
   return (serverModule.server as any)._registeredTools[name];
 }
 
-describe('list_notes tool', () => {
-  test('aggregates paginated responses', async () => {
-    const tool = getTool('list_notes');
-    const firstPage = {
-      notes: {
-        data: [{ id: 'n1' }],
-        page_info: { cursor: 'cursor-1' },
-      },
-    };
-    const secondPage = {
-      notes: {
-        data: [{ id: 'n2' }],
-        page_info: { cursor: null },
-      },
-    };
+describe('listNotes tool', () => {
+  test('sends Fellow contract fields when provided', async () => {
+    const tool = getTool('listNotes');
+    const response = { notes: { data: [{ id: 'n1' }], page_info: { cursor: null } } };
 
-    requestMock.mockResolvedValueOnce({ data: firstPage });
-    requestMock.mockResolvedValueOnce({ data: secondPage });
+    requestMock.mockResolvedValueOnce({ data: response });
 
-    vi.useFakeTimers();
-    try {
-      const promise = tool.callback({
-        include_content_markdown: false,
-        include_event_attendees: false,
-        page_size: 2,
-        max_pages: 2,
-      });
-
-      await vi.runAllTimersAsync();
-      const result = await promise;
-
-      expect(result.structuredContent.count).toBe(2);
-      expect(result.structuredContent.notes).toEqual([{ id: 'n1' }, { id: 'n2' }]);
-      expect(requestMock).toHaveBeenCalledTimes(2);
-      expect(requestMock).toHaveBeenNthCalledWith(1, {
-        method: 'post',
-        url: '/notes',
-        data: {
-          include: { content_markdown: false, event_attendees: false },
-          filters: undefined,
-          pagination: { cursor: undefined, page_size: 2 },
-        },
-      });
-      expect(requestMock).toHaveBeenNthCalledWith(2, {
-        method: 'post',
-        url: '/notes',
-        data: {
-          include: { content_markdown: false, event_attendees: false },
-          filters: undefined,
-          pagination: { cursor: 'cursor-1', page_size: 2 },
-        },
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  test('honors max_pages limit even when cursor continues', async () => {
-    const tool = getTool('list_notes');
-    const firstPage = {
-      notes: {
-        data: [{ id: 'n1' }],
-        page_info: { cursor: 'cursor-1' },
-      },
-    };
-    const secondPage = {
-      notes: {
-        data: [{ id: 'n2' }],
-        page_info: { cursor: 'cursor-2' },
-      },
-    };
-    const thirdPage = {
-      notes: {
-        data: [{ id: 'n3' }],
-        page_info: { cursor: null },
-      },
-    };
-
-    requestMock
-      .mockResolvedValueOnce({ data: firstPage })
-      .mockResolvedValueOnce({ data: secondPage })
-      .mockResolvedValueOnce({ data: thirdPage });
-
-    vi.useFakeTimers();
-    try {
-      const promise = tool.callback({
-        include_content_markdown: false,
-        include_event_attendees: false,
-        page_size: 1,
-        max_pages: 2,
-      });
-
-      await vi.runAllTimersAsync();
-      const result = await promise;
-
-      expect(result.structuredContent.count).toBe(2);
-      expect(result.structuredContent.notes).toEqual([{ id: 'n1' }, { id: 'n2' }]);
-      expect(requestMock).toHaveBeenCalledTimes(2);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  test('propagates upstream errors', async () => {
-    const tool = getTool('list_notes');
-    const error = new Error('boom');
-    requestMock.mockRejectedValue(error);
-
-    await expect(
-      tool.callback({
-        include_content_markdown: false,
-        include_event_attendees: false,
-        page_size: 1,
-        max_pages: 1,
-      })
-    ).rejects.toThrow('boom');
-  });
-
-  test('follows pagination contract when API returns top-level structures', async () => {
-    const tool = getTool('list_notes');
-    const firstPage = {
-      page_info: { cursor: 'cursor-1', page_size: 2 },
-      data: [{ id: 'n1' }],
-    };
-    const secondPage = {
-      page_info: { cursor: null, page_size: 2 },
-      data: [{ id: 'n2' }],
-    };
-
-    requestMock.mockResolvedValueOnce({ data: firstPage });
-    requestMock.mockResolvedValueOnce({ data: secondPage });
-
-    vi.useFakeTimers();
-    try {
-      const promise = tool.callback({
-        include_content_markdown: false,
-        include_event_attendees: false,
-        page_size: 2,
-        max_pages: 3,
-      });
-
-      await vi.runAllTimersAsync();
-      const result = await promise;
-
-      expect(requestMock).toHaveBeenNthCalledWith(1, {
-        method: 'post',
-        url: '/notes',
-        data: {
-          include: { content_markdown: false, event_attendees: false },
-          filters: undefined,
-          pagination: { cursor: undefined, page_size: 2 },
-        },
-      });
-      expect(requestMock).toHaveBeenNthCalledWith(2, {
-        method: 'post',
-        url: '/notes',
-        data: {
-          include: { content_markdown: false, event_attendees: false },
-          filters: undefined,
-          pagination: { cursor: 'cursor-1', page_size: 2 },
-        },
-      });
-      expect(result.structuredContent.count).toBe(2);
-      expect(result.structuredContent.notes).toEqual([{ id: 'n1' }, { id: 'n2' }]);
-      expect(requestMock).toHaveBeenCalledTimes(2);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-});
-
-describe('list_recordings tool', () => {
-  test('collects recordings across pages', async () => {
-    const tool = getTool('list_recordings');
-    const firstPage = {
-      recordings: {
-        data: [{ id: 'r1' }],
-        page_info: { cursor: 'cursor-1' },
-      },
-    };
-    const secondPage = {
-      recordings: {
-        data: [{ id: 'r2' }],
-        page_info: { cursor: null },
-      },
-    };
-
-    requestMock.mockResolvedValueOnce({ data: firstPage });
-    requestMock.mockResolvedValueOnce({ data: secondPage });
-
-    vi.useFakeTimers();
-    try {
-      const promise = tool.callback({
-        include_transcript: true,
-        page_size: 2,
-        max_pages: 2,
-      });
-
-      await vi.runAllTimersAsync();
-      const result = await promise;
-
-      expect(result.structuredContent.count).toBe(2);
-      expect(result.structuredContent.recordings).toEqual([{ id: 'r1' }, { id: 'r2' }]);
-      expect(requestMock).toHaveBeenCalledTimes(2);
-      expect(requestMock).toHaveBeenNthCalledWith(1, {
-        method: 'post',
-        url: '/recordings',
-        data: {
-          include: { transcript: true },
-          filters: undefined,
-          pagination: { cursor: undefined, page_size: 2 },
-        },
-      });
-      expect(requestMock).toHaveBeenNthCalledWith(2, {
-        method: 'post',
-        url: '/recordings',
-        data: {
-          include: { transcript: true },
-          filters: undefined,
-          pagination: { cursor: 'cursor-1', page_size: 2 },
-        },
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  test('handles top-level pagination fields per Fellow spec', async () => {
-    const tool = getTool('list_recordings');
-    const firstPage = {
-      page_info: { cursor: 'next-cursor', page_size: 5 },
-      data: [{ id: 'r1' }],
-    };
-    const secondPage = {
-      page_info: { cursor: null, page_size: 5 },
-      data: [{ id: 'r2' }],
-    };
-
-    requestMock.mockResolvedValueOnce({ data: firstPage });
-    requestMock.mockResolvedValueOnce({ data: secondPage });
-
-    vi.useFakeTimers();
-    try {
-      const promise = tool.callback({
-        include_transcript: false,
-        page_size: 5,
-        max_pages: 3,
-      });
-
-      await vi.runAllTimersAsync();
-      const result = await promise;
-
-      expect(requestMock).toHaveBeenNthCalledWith(1, {
-        method: 'post',
-        url: '/recordings',
-        data: {
-          include: { transcript: false },
-          filters: undefined,
-          pagination: { cursor: undefined, page_size: 5 },
-        },
-      });
-      expect(requestMock).toHaveBeenNthCalledWith(2, {
-        method: 'post',
-        url: '/recordings',
-        data: {
-          include: { transcript: false },
-          filters: undefined,
-          pagination: { cursor: 'next-cursor', page_size: 5 },
-        },
-      });
-      expect(result.structuredContent.count).toBe(2);
-      expect(result.structuredContent.recordings).toEqual([{ id: 'r1' }, { id: 'r2' }]);
-      expect(requestMock).toHaveBeenCalledTimes(2);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-});
-
-describe('get_note tool', () => {
-  test('fetches note by id via filtered search', async () => {
-    const tool = getTool('get_note');
-    requestMock.mockResolvedValueOnce({
-      data: {
-        notes: {
-          data: [{ id: 'note-1', title: 'Note One', content_markdown: '# Note One' }],
-        },
-      },
+    const result = await tool.callback({
+      filters: { event_guid: 'evt-123' },
+      include: { content_markdown: true, event_attendees: true },
+      pagination: { page_size: 25, cursor: null },
     });
-
-    const result = await tool.callback({ note_id: 'note-1' });
 
     expect(requestMock).toHaveBeenCalledWith({
       method: 'post',
       url: '/notes',
       data: {
-        filters: { ids: ['note-1'] },
-        pagination: { page_size: 1 },
-        include: { content_markdown: true },
+        filters: { event_guid: 'evt-123' },
+        include: { content_markdown: true, event_attendees: true },
+        pagination: { cursor: undefined, page_size: 25 },
       },
     });
-    expect(result.structuredContent).toEqual({
-      id: 'note-1',
-      title: 'Note One',
-      content_markdown: '# Note One',
-    });
+    expect(result.structuredContent).toEqual(response);
   });
 
-  test('throws when note is missing', async () => {
-    const tool = getTool('get_note');
-    requestMock.mockResolvedValueOnce({ data: { notes: { data: [] } } });
+  test('omits include when falsey flags are passed', async () => {
+    const tool = getTool('listNotes');
+    const response = { notes: { data: [] } };
+
+    requestMock.mockResolvedValueOnce({ data: response });
+
+    const result = await tool.callback({ include: { content_markdown: false } });
+
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'post',
+      url: '/notes',
+      data: {},
+    });
+    expect(result.structuredContent).toEqual(response);
+  });
+});
+
+describe('listRecordings tool', () => {
+  test('sends optional transcript flag and pagination', async () => {
+    const tool = getTool('listRecordings');
+    const response = { recordings: { data: [{ id: 'r1' }] } };
+
+    requestMock.mockResolvedValueOnce({ data: response });
+
+    const result = await tool.callback({
+      include: { transcript: true },
+      pagination: { page_size: 10 },
+    });
+
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'post',
+      url: '/recordings',
+      data: {
+        include: { transcript: true },
+        pagination: { cursor: undefined, page_size: 10 },
+      },
+    });
+    expect(result.structuredContent).toEqual(response);
+  });
+
+  test('omits transcript when disabled', async () => {
+    const tool = getTool('listRecordings');
+    const response = { recordings: { data: [] } };
+
+    requestMock.mockResolvedValueOnce({ data: response });
+
+    const result = await tool.callback({ include: { transcript: false } });
+
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'post',
+      url: '/recordings',
+      data: {},
+    });
+    expect(result.structuredContent).toEqual(response);
+  });
+});
+
+describe('getNote tool', () => {
+  test('fetches note via RESTful endpoint', async () => {
+    const tool = getTool('getNote');
+    const payload = { note: { id: 'note-1', title: 'Note One' } };
+    requestMock.mockResolvedValueOnce({ data: payload });
+
+    const result = await tool.callback({ note_id: 'note-1' });
+
+    expect(requestMock).toHaveBeenCalledWith({ method: 'get', url: '/note/note-1', data: undefined });
+    expect(result.structuredContent).toEqual(payload.note);
+  });
+
+  test('throws when note missing', async () => {
+    const tool = getTool('getNote');
+    requestMock.mockResolvedValueOnce({ data: {} });
 
     await expect(tool.callback({ note_id: 'missing' })).rejects.toThrow('Note missing not found');
+  });
+});
+
+describe('getRecording tool', () => {
+  test('retrieves recordings via RESTful endpoint', async () => {
+    const tool = getTool('getRecording');
+    const payload = { recording: { id: 'rec-1', title: 'Recording One' } };
+    requestMock.mockResolvedValueOnce({ data: payload });
+
+    const result = await tool.callback({ recording_id: 'rec-1' });
+
+    expect(requestMock).toHaveBeenCalledWith({ method: 'get', url: '/recording/rec-1', data: undefined });
+    expect(result.structuredContent).toEqual(payload.recording);
+  });
+
+  test('throws when recording missing', async () => {
+    const tool = getTool('getRecording');
+    requestMock.mockResolvedValueOnce({ data: {} });
+
+    await expect(tool.callback({ recording_id: 'rec-x' })).rejects.toThrow('Recording rec-x not found');
   });
 });

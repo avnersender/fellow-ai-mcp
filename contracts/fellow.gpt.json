@@ -1,0 +1,36 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Fellow Notes & Recordings",
+  "name_for_model": "fellow",
+  "description_for_human": "Search and retrieve Fellow meeting notes, recordings, and your workspace identity.",
+  "description_for_model": "Use the Fellow API to list or fetch notes and recordings for the authenticated workspace and retrieve the calling user's profile.",
+  "instructions": "Always include the X-API-KEY header using the provided Fellow API key and target the workspace using the supplied subdomain (https://{subdomain}.fellow.app/api/v1). Use list endpoints with pagination for discovery before calling detail endpoints.",
+  "logo_url": "https://fellow.app/favicon.ico",
+  "contact_email": "support@fellow.app",
+  "legal_info_url": "https://fellow.app/privacy",
+  "auth": {
+    "type": "api_key",
+    "authorization_type": "header",
+    "instructions": "Send the Fellow API key as the X-API-KEY header on every request.",
+    "verification_tokens": {}
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://developers.fellow.ai/openapi.yaml",
+    "is_user_authenticated": true,
+    "headers": {
+      "X-API-KEY": "{{FELLOW_API_KEY}}"
+    },
+    "server_url_template": "https://{{FELLOW_SUBDOMAIN}}.fellow.app/api/v1"
+  },
+  "variables": {
+    "FELLOW_SUBDOMAIN": {
+      "description": "Workspace subdomain used to construct Fellow API URLs.",
+      "required": true
+    },
+    "FELLOW_API_KEY": {
+      "description": "API key generated from Fellow → User settings → Developer tools.",
+      "required": true
+    }
+  }
+}

@@ -120,21 +120,43 @@ async function main() {
     await client.connect(clientTransport);
 
     const tools = await client.listTools();
-    console.log('Tools:', tools.tools.map((tool) => tool.name).join(', '));
+    const toolNames = tools.tools.map((tool) => tool.name);
+    console.log('Tools:', toolNames.join(', '));
 
-    const me = await client.callTool({ name: 'get_me', arguments: {} });
+    const findTool = (...candidates) => {
+      for (const candidate of candidates) {
+        if (toolNames.includes(candidate)) {
+          return candidate;
+        }
+      }
+      return undefined;
+    };
+
+    const getMeName = findTool('getMe', 'get_me');
+    if (!getMeName) {
+      throw new Error('getMe tool missing from server');
+    }
+
+    const me = await client.callTool({ name: getMeName, arguments: {} });
     console.log('Authenticated user:', me.structuredContent?.name ?? me.structuredContent);
 
+    const listNotesName = findTool('listNotes', 'list_notes');
+    if (!listNotesName) {
+      throw new Error('listNotes tool missing from server');
+    }
+
     const notesResponse = await client.callTool({
-      name: 'list_notes',
-      arguments: { page_size: 3, max_pages: 1 },
+      name: listNotesName,
+      arguments: { pagination: { page_size: 3 } },
     });
-    console.log('Fetched notes count:', notesResponse.structuredContent?.count);
+    const noteCollection =
+      notesResponse.structuredContent?.notes?.data ?? notesResponse.structuredContent?.data ?? [];
+    console.log('Fetched notes count:', Array.isArray(noteCollection) ? noteCollection.length : 0);
 
     const templates = await client.listResourceTemplates();
     console.log('Resource templates:', templates.resourceTemplates.map((tpl) => tpl.name).join(', '));
 
-    const firstNote = notesResponse.structuredContent?.notes?.[0];
+    const firstNote = Array.isArray(noteCollection) ? noteCollection[0] : undefined;
     const firstNoteId = firstNote?.id ?? firstNote?.guid;
     if (firstNoteId) {
       try {

@@ -1,5 +1,5 @@
+import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, test } from 'vitest';
-import { z } from 'zod';
 
 process.env.NODE_ENV = 'test';
 process.env.FELLOW_SUBDOMAIN = process.env.FELLOW_SUBDOMAIN ?? 'stub';
@@ -12,40 +12,50 @@ beforeAll(async () => {
 });
 
 describe('tool input schemas', () => {
-  test('list_notes applies defaults and accepts minimal input', () => {
-    const schema = z.object(serverModule.listNotesInputSchema);
-    const parsed = schema.parse({});
+  test('listNotes applies pagination defaults inside optional object', () => {
+    const parsed = serverModule.listNotesInputSchema.parse({ pagination: {} });
 
-    expect(parsed.include_content_markdown).toBe(false);
-    expect(parsed.include_event_attendees).toBe(false);
-    expect(parsed.page_size).toBe(20);
-    expect(parsed.max_pages).toBe(3);
-    expect(parsed.filters).toBeUndefined();
+    expect(parsed.pagination?.page_size).toBe(20);
+    expect(parsed.pagination?.cursor).toBeUndefined();
   });
 
-  test('list_notes rejects out-of-range pagination', () => {
-    const schema = z.object(serverModule.listNotesInputSchema);
-    const result = schema.safeParse({ page_size: 0, max_pages: 25 });
+  test('listNotes rejects unknown properties', () => {
+    const result = serverModule.listNotesInputSchema.safeParse({ foo: 'bar' });
 
     expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues.some((issue) => issue.path[0] === 'page_size')).toBe(true);
-    }
   });
 
-  test('list_recordings mirrors pagination validation', () => {
-    const schema = z.object(serverModule.listRecordingsInputSchema);
-    const ok = schema.safeParse({});
+  test('listRecordings validates pagination bounds', () => {
+    const ok = serverModule.listRecordingsInputSchema.safeParse({ pagination: { page_size: 5 } });
     expect(ok.success).toBe(true);
 
-    const bad = schema.safeParse({ page_size: 100 });
+    const bad = serverModule.listRecordingsInputSchema.safeParse({ pagination: { page_size: 500 } });
     expect(bad.success).toBe(false);
   });
 
-  test('get_note enforces a note id', () => {
-    const schema = z.object(serverModule.getNoteInputSchema);
+  test('getNote and getRecording enforce required ids', () => {
+    expect(serverModule.getNoteInputSchema.safeParse({ note_id: 'abc-123' }).success).toBe(true);
+    expect(serverModule.getNoteInputSchema.safeParse({}).success).toBe(false);
 
-    expect(schema.safeParse({ note_id: 'abc-123' }).success).toBe(true);
-    expect(schema.safeParse({}).success).toBe(false);
+    expect(serverModule.getRecordingInputSchema.safeParse({ recording_id: 'rec-1' }).success).toBe(true);
+    expect(serverModule.getRecordingInputSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe('contract artifacts', () => {
+  const contractPath = new URL('../contracts/fellow.mcp.json', import.meta.url);
+  const gptPath = new URL('../contracts/fellow.gpt.json', import.meta.url);
+  const contract = JSON.parse(readFileSync(contractPath, 'utf-8'));
+  const gptManifest = JSON.parse(readFileSync(gptPath, 'utf-8'));
+
+  test('GPT manifest references the Fellow OpenAPI spec', () => {
+    expect(gptManifest.api?.type).toBe('openapi');
+    expect(gptManifest.api?.url).toContain('developers.fellow.ai');
+    expect(gptManifest.api?.server_url_template).toContain('{{FELLOW_SUBDOMAIN}}');
+  });
+
+  test('GPT manifest variables match MCP contract env requirements', () => {
+    expect(Object.keys(gptManifest.variables).sort()).toEqual(Object.keys(contract.env).sort());
+    expect(gptManifest.auth?.instructions).toContain('X-API-KEY');
   });
 });

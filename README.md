@@ -36,6 +36,10 @@
     }
   }
   ```
+
+## ChatGPT GPT Builder Action
+
+- Import `contracts/fellow.gpt.json` when wiring the Fellow API as a custom Action. The schema mirrors the MCP contract, references the public OpenAPI description, and documents the required `FELLOW_SUBDOMAIN` and `FELLOW_API_KEY` variables for authenticated requests.
   Build with `npm run build` inside WSL so `dist/server.js` exists.
 
 - **Claude Desktop (macOS)**  
