@@ -150,6 +150,58 @@ describe('list_notes tool', () => {
       })
     ).rejects.toThrow('boom');
   });
+
+  test('follows pagination contract when API returns top-level structures', async () => {
+    const tool = getTool('list_notes');
+    const firstPage = {
+      page_info: { cursor: 'cursor-1', page_size: 2 },
+      data: [{ id: 'n1' }],
+    };
+    const secondPage = {
+      page_info: { cursor: null, page_size: 2 },
+      data: [{ id: 'n2' }],
+    };
+
+    requestMock.mockResolvedValueOnce({ data: firstPage });
+    requestMock.mockResolvedValueOnce({ data: secondPage });
+
+    vi.useFakeTimers();
+    try {
+      const promise = tool.callback({
+        include_content_markdown: false,
+        include_event_attendees: false,
+        page_size: 2,
+        max_pages: 3,
+      });
+
+      await vi.runAllTimersAsync();
+      const result = await promise;
+
+      expect(requestMock).toHaveBeenNthCalledWith(1, {
+        method: 'post',
+        url: '/notes',
+        data: {
+          include: { content_markdown: false, event_attendees: false },
+          filters: undefined,
+          pagination: { cursor: undefined, page_size: 2 },
+        },
+      });
+      expect(requestMock).toHaveBeenNthCalledWith(2, {
+        method: 'post',
+        url: '/notes',
+        data: {
+          include: { content_markdown: false, event_attendees: false },
+          filters: undefined,
+          pagination: { cursor: 'cursor-1', page_size: 2 },
+        },
+      });
+      expect(result.structuredContent.count).toBe(2);
+      expect(result.structuredContent.notes).toEqual([{ id: 'n1' }, { id: 'n2' }]);
+      expect(requestMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('list_recordings tool', () => {
@@ -203,6 +255,57 @@ describe('list_recordings tool', () => {
           pagination: { cursor: 'cursor-1', page_size: 2 },
         },
       });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test('handles top-level pagination fields per Fellow spec', async () => {
+    const tool = getTool('list_recordings');
+    const firstPage = {
+      page_info: { cursor: 'next-cursor', page_size: 5 },
+      data: [{ id: 'r1' }],
+    };
+    const secondPage = {
+      page_info: { cursor: null, page_size: 5 },
+      data: [{ id: 'r2' }],
+    };
+
+    requestMock.mockResolvedValueOnce({ data: firstPage });
+    requestMock.mockResolvedValueOnce({ data: secondPage });
+
+    vi.useFakeTimers();
+    try {
+      const promise = tool.callback({
+        include_transcript: false,
+        page_size: 5,
+        max_pages: 3,
+      });
+
+      await vi.runAllTimersAsync();
+      const result = await promise;
+
+      expect(requestMock).toHaveBeenNthCalledWith(1, {
+        method: 'post',
+        url: '/recordings',
+        data: {
+          include: { transcript: false },
+          filters: undefined,
+          pagination: { cursor: undefined, page_size: 5 },
+        },
+      });
+      expect(requestMock).toHaveBeenNthCalledWith(2, {
+        method: 'post',
+        url: '/recordings',
+        data: {
+          include: { transcript: false },
+          filters: undefined,
+          pagination: { cursor: 'next-cursor', page_size: 5 },
+        },
+      });
+      expect(result.structuredContent.count).toBe(2);
+      expect(result.structuredContent.recordings).toEqual([{ id: 'r1' }, { id: 'r2' }]);
+      expect(requestMock).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();
     }
