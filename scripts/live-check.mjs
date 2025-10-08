@@ -122,19 +122,21 @@ async function main() {
     const tools = await client.listTools();
     console.log('Tools:', tools.tools.map((tool) => tool.name).join(', '));
 
-    const me = await client.callTool({ name: 'get_me', arguments: {} });
+    const me = await client.callTool({ name: 'getMe', arguments: {} });
     console.log('Authenticated user:', me.structuredContent?.name ?? me.structuredContent);
 
     const notesResponse = await client.callTool({
-      name: 'list_notes',
-      arguments: { page_size: 3, max_pages: 1 },
+      name: 'listNotes',
+      arguments: { pagination: { page_size: 3 } },
     });
-    console.log('Fetched notes count:', notesResponse.structuredContent?.count);
+    const noteCollection =
+      notesResponse.structuredContent?.notes?.data ?? notesResponse.structuredContent?.data ?? [];
+    console.log('Fetched notes count:', Array.isArray(noteCollection) ? noteCollection.length : 0);
 
     const templates = await client.listResourceTemplates();
     console.log('Resource templates:', templates.resourceTemplates.map((tpl) => tpl.name).join(', '));
 
-    const firstNote = notesResponse.structuredContent?.notes?.[0];
+    const firstNote = Array.isArray(noteCollection) ? noteCollection[0] : undefined;
     const firstNoteId = firstNote?.id ?? firstNote?.guid;
     if (firstNoteId) {
       try {

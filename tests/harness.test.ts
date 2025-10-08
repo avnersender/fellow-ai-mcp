@@ -118,17 +118,23 @@ describe('MCP stdio handshake', () => {
     await client.connect(clientTransport);
 
     const tools = await client.listTools();
-    expect(tools.tools.map((t) => t.name).sort()).toEqual(['get_me', 'get_note', 'list_notes', 'list_recordings']);
+    expect(tools.tools.map((t) => t.name).sort()).toEqual([
+      'getMe',
+      'getNote',
+      'getRecording',
+      'listNotes',
+      'listRecordings',
+    ]);
 
     requestMock.mockResolvedValueOnce({ data: { id: 'user-123', name: 'Test User' } });
-    const getMeResult = await client.callTool({ name: 'get_me', arguments: {} });
+    const getMeResult = await client.callTool({ name: 'getMe', arguments: {} });
     expect(getMeResult.structuredContent).toEqual({ id: 'user-123', name: 'Test User' });
 
     const templates = await client.listResourceTemplates();
     expect(templates.resourceTemplates.map((tpl) => tpl.name)).toEqual(['fellow-note']);
 
     requestMock.mockResolvedValueOnce({
-      data: { notes: { data: [{ id: 'note-1', title: 'Note One', content_markdown: '# Note One' }] } },
+      data: { note: { id: 'note-1', title: 'Note One', content_markdown: '# Note One' } },
     });
     const resource = await client.readResource({ uri: 'fellow://note/note-1' });
     expect(resource.contents[0]?.text).toContain('# Note One');
