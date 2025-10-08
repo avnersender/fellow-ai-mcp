@@ -11,8 +11,8 @@ This repository hosts a Model Context Protocol (MCP) server that lets MCP-compat
 ## Setup
 
 ```bash
-git clone https://github.com/<your-org>/mcp-fellow.git
-cd mcp-fellow
+git clone https://github.com/avnersender/fellow-ai-mcp
+cd fellow-ai-mcp
 npm install
 ```
 
@@ -23,7 +23,7 @@ The server requires two environment variables:
 - `FELLOW_SUBDOMAIN` – the workspace subdomain (e.g. `acme` for `https://acme.fellow.app`)
 - `FELLOW_API_KEY` – the API key generated from Fellow → User Settings → Developer Tools
 
-You can export them in your shell, add them to `.env.local` (ignored by git), or configure them directly in your MCP client.
+Env-vars are configured  directly in your MCP client (see below).
 
 ## Build & Run
 
@@ -31,12 +31,10 @@ You can export them in your shell, add them to `.env.local` (ignored by git), or
 - Production build: `npm run build`
 - Start compiled server: `npm start` (after running the build)
 
-The compiled output is emitted to `dist/`—do not edit those files manually.
-
 ## Testing & Smoke Checks
 
 - Unit tests: `npm test`
-- Live API verification (requires valid credentials): `npm run live-check`
+- Live API verification (requires valid key and domain as env-vars): `npm run live-check`
 
 Run the test suite before opening a pull request. The live check exercises the deployed Fellow API and is optional unless you need end-to-end validation.
 
