@@ -21,7 +21,7 @@ const http = axios.create({
 });
 
 // Basic retry for 429/5xx with jitter
-async function call<T>(cfg: { method: 'get' | 'post'; url: string; data?: unknown }): Promise<T> {
+export async function call<T>(cfg: { method: 'get' | 'post'; url: string; data?: unknown }): Promise<T> {
   let delay = 300;
   for (let attempt = 1; attempt <= 4; attempt++) {
     try {
@@ -40,7 +40,50 @@ async function call<T>(cfg: { method: 'get' | 'post'; url: string; data?: unknow
   throw new Error('Upstream unavailable after retries');
 }
 
-const server = new McpServer({ name: 'fellow-mcp', version: '1.0.0' });
+export const server = new McpServer({ name: 'fellow-mcp', version: '1.0.0' });
+
+export const getMeInputSchema = {};
+
+export const listNotesInputSchema = {
+  include_content_markdown: z.boolean().default(false),
+  include_event_attendees: z.boolean().default(false),
+  filters: z
+    .object({
+      event_guid: z.string().optional(),
+      title: z.string().optional(),
+      channel_id: z.string().optional(),
+      created_at_start: z.string().optional(),
+      created_at_end: z.string().optional(),
+      updated_at_start: z.string().optional(),
+      updated_at_end: z.string().optional(),
+    })
+    .partial()
+    .optional(),
+  page_size: z.number().int().min(1).max(50).default(20),
+  max_pages: z.number().int().min(1).max(20).default(3),
+};
+
+export const getNoteInputSchema = {
+  note_id: z.string(),
+};
+
+export const listRecordingsInputSchema = {
+  include_transcript: z.boolean().default(false),
+  filters: z
+    .object({
+      event_guid: z.string().optional(),
+      title: z.string().optional(),
+      channel_id: z.string().optional(),
+      created_at_start: z.string().optional(),
+      created_at_end: z.string().optional(),
+      updated_at_start: z.string().optional(),
+      updated_at_end: z.string().optional(),
+    })
+    .partial()
+    .optional(),
+  page_size: z.number().int().min(1).max(50).default(20),
+  max_pages: z.number().int().min(1).max(20).default(2),
+};
 
 // --------- Tools ---------
 
@@ -62,24 +105,7 @@ server.registerTool(
   {
     title: 'List notes',
     description: 'POST /notes with optional filters. Returns paginated notes; set max_pages to control pagination.',
-    inputSchema: {
-      include_content_markdown: z.boolean().default(false),
-      include_event_attendees: z.boolean().default(false),
-      filters: z
-        .object({
-          event_guid: z.string().optional(),
-          title: z.string().optional(),
-          channel_id: z.string().optional(),
-          created_at_start: z.string().optional(),
-          created_at_end: z.string().optional(),
-          updated_at_start: z.string().optional(),
-          updated_at_end: z.string().optional(),
-        })
-        .partial()
-        .optional(),
-      page_size: z.number().int().min(1).max(50).default(20),
-      max_pages: z.number().int().min(1).max(20).default(3),
-    },
+    inputSchema: listNotesInputSchema,
   },
   async ({ include_content_markdown, include_event_attendees, filters, page_size, max_pages }) => {
     let cursor: string | null = null;
@@ -110,7 +136,7 @@ server.registerTool(
   {
     title: 'Get a note by id',
     description: 'GET /notes/{id}',
-    inputSchema: { note_id: z.string() },
+    inputSchema: getNoteInputSchema,
   },
   async ({ note_id }) => {
     const note = await call<any>({ method: 'get', url: `/notes/${note_id}` });
@@ -123,23 +149,7 @@ server.registerTool(
   {
     title: 'List recordings',
     description: 'POST /recordings with optional filters/transcript include; paginates like notes.',
-    inputSchema: {
-      include_transcript: z.boolean().default(false),
-      filters: z
-        .object({
-          event_guid: z.string().optional(),
-          title: z.string().optional(),
-          channel_id: z.string().optional(),
-          created_at_start: z.string().optional(),
-          created_at_end: z.string().optional(),
-          updated_at_start: z.string().optional(),
-          updated_at_end: z.string().optional(),
-        })
-        .partial()
-        .optional(),
-      page_size: z.number().int().min(1).max(50).default(20),
-      max_pages: z.number().int().min(1).max(20).default(2),
-    },
+    inputSchema: listRecordingsInputSchema,
   },
   async ({ include_transcript, filters, page_size, max_pages }) => {
     let cursor: string | null = null;
@@ -174,5 +184,7 @@ server.registerResource(
 );
 
 // --------- Start (stdio) ---------
-const transport = new StdioServerTransport();
-await server.connect(transport);
+if (process.env.NODE_ENV !== 'test') {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
