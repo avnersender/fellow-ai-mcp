@@ -4,7 +4,7 @@ import axios from 'axios';
 import { z } from 'zod';
 
 // --------- Config via env ---------
-// FELLOW_SUBDOMAIN: e.g. "xtype"   -> https://xtype.fellow.app
+// FELLOW_SUBDOMAIN: e.g. "abc"   -> https://abc.fellow.app
 // FELLOW_API_KEY:   your API key    -> sent as X-API-KEY
 const SUBDOMAIN = process.env.FELLOW_SUBDOMAIN;
 const API_KEY = process.env.FELLOW_API_KEY;
