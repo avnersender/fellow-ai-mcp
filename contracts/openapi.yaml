@@ -1,0 +1,334 @@
+openapi: 3.1.0
+info:
+  title: Fellow Developer API
+  version: "1.0"
+  description: |
+    Unofficial OpenAPI spec synthesized from https://developers.fellow.ai/.
+    Covers authentication, pagination, and endpoints for Recordings, Notes, and Users.
+    Source-of-truth docs: developers.fellow.ai.
+servers:
+  - url: https://{subdomain}.fellow.app/api/v1
+    variables:
+      subdomain:
+        default: your-fellow-subdomain
+        description: Your workspace subdomain.
+tags:
+  - name: Recordings
+    description: Meeting recordings and transcripts.
+  - name: Notes
+    description: Meeting notes/agenda and metadata.
+  - name: Users
+    description: Info about the authenticated user and workspace.
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /me:
+    get:
+      tags: [Users]
+      summary: Get Authenticated User
+      operationId: getMe
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Authenticated user and workspace
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIUserResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /recordings:
+    post:
+      tags: [Recordings]
+      summary: List Recordings
+      description: |
+        Returns recordings available to the API key owner, with optional filters, includes and cursor-based pagination.
+      operationId: listRecordings
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListRecordingsRequest"
+      responses:
+        "200":
+          description: Paginated list of recordings
+          headers:
+            X-RateLimit-Remaining:
+              description: Remaining requests in the current window
+              schema: { type: integer }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedRecordings"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /recording/{recording_id}:
+    get:
+      tags: [Recordings]
+      summary: Retrieve Recording
+      operationId: getRecording
+      parameters:
+        - in: path
+          name: recording_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: A single recording
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIRecording"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /notes:
+    post:
+      tags: [Notes]
+      summary: List Notes
+      description: |
+        Returns notes available to the API key owner, with optional filters, includes and cursor-based pagination.
+      operationId: listNotes
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListNotesRequest"
+      responses:
+        "200":
+          description: Paginated list of notes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedNotes"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /note/{note_id}:
+    get:
+      tags: [Notes]
+      summary: Retrieve Note
+      operationId: getNote
+      parameters:
+        - in: path
+          name: note_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: A single note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APINote"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+
+  responses:
+    BadRequest:
+      description: Input validation errors
+    Unauthorized:
+      description: API key missing/invalid
+    Forbidden:
+      description: Authenticated but not permitted
+    NotFound:
+      description: Resource not found
+    RateLimited:
+      description: Too many requests (per-second or daily cap)
+    InternalError:
+      description: Unexpected error
+
+  schemas:
+    PaginationInput:
+      type: object
+      properties:
+        cursor:
+          type: [string, "null"]
+          description: Set null or omit for first page.
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
+      additionalProperties: false
+
+    PageInfo:
+      type: object
+      properties:
+        cursor:
+          type: [string, "null"]
+        page_size:
+          type: integer
+      required: [cursor, page_size]
+      additionalProperties: true
+
+    RecordingFilters:
+      type: object
+      properties:
+        event_guid: { type: string, description: "3P calendar event ID" }
+        created_at_start: { type: string, format: date-time }
+        created_at_end:   { type: string, format: date-time }
+        updated_at_start: { type: string, format: date-time }
+        updated_at_end:   { type: string, format: date-time }
+        title:            { type: string, maxLength: 255 }
+        channel_id:       { type: string }
+      additionalProperties: false
+
+    NoteFilters:
+      type: object
+      properties:
+        event_guid: { type: string }
+        created_at_start: { type: string, format: date-time }
+        created_at_end:   { type: string, format: date-time }
+        updated_at_start: { type: string, format: date-time }
+        updated_at_end:   { type: string, format: date-time }
+        title:            { type: string, maxLength: 255 }
+        channel_id:       { type: string }
+      additionalProperties: false
+
+    ListRecordingsRequest:
+      type: object
+      properties:
+        filters: { $ref: "#/components/schemas/RecordingFilters" }
+        pagination: { $ref: "#/components/schemas/PaginationInput" }
+        include:
+          type: object
+          properties:
+            transcript:
+              type: boolean
+              description: Include transcript payload in each item.
+          additionalProperties: false
+      additionalProperties: false
+
+    ListNotesRequest:
+      type: object
+      properties:
+        filters: { $ref: "#/components/schemas/NoteFilters" }
+        pagination: { $ref: "#/components/schemas/PaginationInput" }
+        include:
+          type: object
+          properties:
+            content_markdown:
+              type: boolean
+              description: Include markdown rendering of note blocks.
+            event_attendees:
+              type: boolean
+              description: Include event_attendees list (emails).
+          additionalProperties: false
+      additionalProperties: false
+
+    APITranscriptSegment:
+      type: object
+      properties:
+        speaker: { type: string }
+        text: { type: string }
+        start_time: { type: number }
+        end_time: { type: number }
+      required: [speaker, text, start_time, end_time]
+      additionalProperties: true
+
+    APITranscript:
+      type: object
+      properties:
+        language_code: { type: string, example: "en-US" }
+        speech_segments:
+          type: array
+          items: { $ref: "#/components/schemas/APITranscriptSegment" }
+      required: [language_code, speech_segments]
+      additionalProperties: true
+
+    APIRecording:
+      type: object
+      description: A meeting recording/recap and associated metadata.
+      properties:
+        id: { type: string }
+        title: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        note_id: { type: string, description: "Associated note ID" }
+        event_start: { type: string, format: date-time, nullable: true }
+        event_end: { type: string, format: date-time, nullable: true }
+        recording_start: { type: string, format: date-time, nullable: true }
+        recording_end: { type: string, format: date-time, nullable: true }
+        virtual_call_url: { type: string, format: uri, nullable: true }
+        event_guid: { type: string, description: "External calendar event ID", nullable: true }
+        channel_id: { type: string, nullable: true }
+        transcript:
+          oneOf:
+            - $ref: "#/components/schemas/APITranscript"
+            - type: "null"
+      additionalProperties: true
+
+    APINote:
+      type: object
+      description: A meeting note/agenda and associated metadata.
+      properties:
+        id: { type: string }
+        title: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        event_start: { type: string, format: date-time, nullable: true }
+        event_end: { type: string, format: date-time, nullable: true }
+        virtual_call_url: { type: string, format: uri, nullable: true }
+        event_guid: { type: string, nullable: true }
+        event_attendees:
+          type: array
+          items: { type: string, format: email }
+          nullable: true
+        content_markdown: { type: string, nullable: true }
+        recording_ids:
+          type: array
+          items: { type: string }
+          nullable: true
+        channel_id: { type: string, nullable: true }
+      additionalProperties: true
+
+    PaginatedRecordings:
+      type: object
+      properties:
+        page_info: { $ref: "#/components/schemas/PageInfo" }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/APIRecording" }
+      required: [page_info, data]
+      additionalProperties: false
+
+    PaginatedNotes:
+      type: object
+      properties:
+        page_info: { $ref: "#/components/schemas/PageInfo" }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/APINote" }
+      required: [page_info, data]
+      additionalProperties: false

@@ -1,0 +1,143 @@
+{
+    "name": "fellow",
+    "version": "1.0.0",
+    "description": "MCP contract for Fellow API (notes, recordings, user).",
+    "env": {
+      "FELLOW_API_KEY": {
+        "required": true,
+        "description": "Your Fellow API key for header X-API-KEY."
+      },
+      "FELLOW_SUBDOMAIN": {
+        "required": true,
+        "description": "Workspace subdomain used in https://{subdomain}.fellow.app."
+      }
+    },
+    "tools": [
+      {
+        "name": "getMe",
+        "description": "Get the authenticated user/workspace.",
+        "input_schema": { "type": "object", "properties": {}, "additionalProperties": false },
+        "type": "rest",
+        "method": "GET",
+        "path": "/api/v1/me",
+        "base_url": "https://{{FELLOW_SUBDOMAIN}}.fellow.app",
+        "headers": { "X-API-KEY": "{{FELLOW_API_KEY}}", "Content-Type": "application/json" }
+      },
+      {
+        "name": "listRecordings",
+        "description": "List recordings with optional filters, includes, and pagination.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "filters": {
+              "type": "object",
+              "properties": {
+                "event_guid": { "type": "string" },
+                "created_at_start": { "type": "string" },
+                "created_at_end": { "type": "string" },
+                "updated_at_start": { "type": "string" },
+                "updated_at_end": { "type": "string" },
+                "title": { "type": "string" },
+                "channel_id": { "type": "string" }
+              },
+              "additionalProperties": false
+            },
+            "include": {
+              "type": "object",
+              "properties": { "transcript": { "type": "boolean" } },
+              "additionalProperties": false
+            },
+            "pagination": {
+              "type": "object",
+              "properties": {
+                "cursor": { "type": ["string", "null"] },
+                "page_size": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "type": "rest",
+        "method": "POST",
+        "path": "/api/v1/recordings",
+        "base_url": "https://{{FELLOW_SUBDOMAIN}}.fellow.app",
+        "headers": { "X-API-KEY": "{{FELLOW_API_KEY}}", "Content-Type": "application/json" }
+      },
+      {
+        "name": "getRecording",
+        "description": "Retrieve a single recording by ID.",
+        "input_schema": {
+          "type": "object",
+          "properties": { "recording_id": { "type": "string" } },
+          "required": ["recording_id"],
+          "additionalProperties": false
+        },
+        "type": "rest",
+        "method": "GET",
+        "path": "/api/v1/recording/{{recording_id}}",
+        "base_url": "https://{{FELLOW_SUBDOMAIN}}.fellow.app",
+        "headers": { "X-API-KEY": "{{FELLOW_API_KEY}}" }
+      },
+      {
+        "name": "listNotes",
+        "description": "List notes with optional filters, includes, and pagination.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "filters": {
+              "type": "object",
+              "properties": {
+                "event_guid": { "type": "string" },
+                "created_at_start": { "type": "string" },
+                "created_at_end": { "type": "string" },
+                "updated_at_start": { "type": "string" },
+                "updated_at_end": { "type": "string" },
+                "title": { "type": "string" },
+                "channel_id": { "type": "string" }
+              },
+              "additionalProperties": false
+            },
+            "include": {
+              "type": "object",
+              "properties": {
+                "content_markdown": { "type": "boolean" },
+                "event_attendees": { "type": "boolean" }
+              },
+              "additionalProperties": false
+            },
+            "pagination": {
+              "type": "object",
+              "properties": {
+                "cursor": { "type": ["string", "null"] },
+                "page_size": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "type": "rest",
+        "method": "POST",
+        "path": "/api/v1/notes",
+        "base_url": "https://{{FELLOW_SUBDOMAIN}}.fellow.app",
+        "headers": { "X-API-KEY": "{{FELLOW_API_KEY}}", "Content-Type": "application/json" }
+      },
+      {
+        "name": "getNote",
+        "description": "Retrieve a single note by ID.",
+        "input_schema": {
+          "type": "object",
+          "properties": { "note_id": { "type": "string" } },
+          "required": ["note_id"],
+          "additionalProperties": false
+        },
+        "type": "rest",
+        "method": "GET",
+        "path": "/api/v1/note/{{note_id}}",
+        "base_url": "https://{{FELLOW_SUBDOMAIN}}.fellow.app",
+        "headers": { "X-API-KEY": "{{FELLOW_API_KEY}}" }
+      }
+    ]
+  }
+  
