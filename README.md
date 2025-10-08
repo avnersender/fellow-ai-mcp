@@ -1,27 +1,59 @@
-## MCP Client Configuration
+## Fellow MCP Server
 
-### Obtain Fellow.app API Key
+This repository hosts a Model Context Protocol (MCP) server that lets MCP-compatible clients interact with Fellow.ai using a shared toolset defined in `server.ts`.
 
-- **Login to (https://fellow.app/)**  
-  Once logged in, in the top-left click the user-icon -> User Settings -> Developer Tools -> Create New API Key
+## Prerequisites
 
-### Configure Client (examples)
+- Node.js 18 or newer
+- npm (bundled with Node.js)
+- A Fellow API key scoped for the actions you plan to perform
 
-- **Codex CLI (WSL/Linux/macOS)**  
-  Configure `~\.codex\config.toml` with:
-  ```yaml
+## Setup
+
+```bash
+git clone https://github.com/<your-org>/mcp-fellow.git
+cd mcp-fellow
+npm install
+```
+
+## Configuration
+
+The server requires two environment variables:
+
+- `FELLOW_SUBDOMAIN` – the workspace subdomain (e.g. `acme` for `https://acme.fellow.app`)
+- `FELLOW_API_KEY` – the API key generated from Fellow → User Settings → Developer Tools
+
+You can export them in your shell, add them to `.env.local` (ignored by git), or configure them directly in your MCP client.
+
+## Build & Run
+
+- Development: `npx -y tsx server.ts`
+- Production build: `npm run build`
+- Start compiled server: `npm start` (after running the build)
+
+The compiled output is emitted to `dist/`—do not edit those files manually.
+
+## Testing & Smoke Checks
+
+- Unit tests: `npm test`
+- Live API verification (requires valid credentials): `npm run live-check`
+
+Run the test suite before opening a pull request. The live check exercises the deployed Fellow API and is optional unless you need end-to-end validation.
+
+## MCP Client Configuration Examples
+
+- **Codex CLI (Linux/macOS/WSL)**
+  ```toml
   [mcp_servers."fellow-ai"]
   command = "npx"
-  args = ["-y", "tsx", "~/mcp-fellow/server.ts"]
-  
-  # Put env in the dedicated env table (don’t pass via --env args)
+  args = ["-y", "tsx", "/home/<user>/mcp-fellow/server.ts"]
+
   [mcp_servers."fellow-ai".env]
   FELLOW_SUBDOMAIN = "domain_name"
-  FELLOW_API_KEY   = "***"
+  FELLOW_API_KEY   = "..."
   ```
 
-- **Claude Desktop (Windows + WSL)**  
-  Configure `claude_desktop_config.json` with:  
+- **Claude Desktop (Windows + WSL)**
   ```json
   {
     "mcpServers": {
@@ -30,23 +62,22 @@
         "args": [
           "bash",
           "-c",
-          "cd /home/avner/mcp/mcp-fellow && FELLOW_SUBDOMAIN=domain_name FELLOW_API_KEY=*** node dist/server.js"
+          "cd /home/<user>/mcp-fellow && FELLOW_SUBDOMAIN=domain_name FELLOW_API_KEY=... node dist/server.js"
         ]
       }
     }
   }
   ```
-  Build with `npm run build` inside WSL so `dist/server.js` exists.
+  Run `npm run build` inside WSL so `dist/server.js` is available.
 
-- **Claude Desktop (macOS)**  
-  After `npm run build`, configure:  
+- **Claude Desktop (macOS)**
   ```json
   {
     "mcpServers": {
       "fellow-ai": {
         "command": "node",
         "args": [
-          "/Users/<user>/mcp/mcp-fellow/dist/server.js"
+          "/Users/<user>/mcp-fellow/dist/server.js"
         ],
         "env": {
           "FELLOW_SUBDOMAIN": "domain_name",
@@ -56,3 +87,5 @@
     }
   }
   ```
+
+Adjust paths to match your installation. Other MCP clients can be wired similarly by pointing to either `npx -y tsx server.ts` (development) or the built `dist/server.js`.
