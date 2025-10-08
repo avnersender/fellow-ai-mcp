@@ -144,6 +144,9 @@ temp/
 coverage/
 .nyc_output/
 
+# Development environment
+.devenv/
+
 # Package manager lock files (uncomment if you want to ignore them)
 # package-lock.json
 # yarn.lock
