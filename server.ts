@@ -85,6 +85,28 @@ export const listRecordingsInputSchema = {
   max_pages: z.number().int().min(1).max(20).default(2),
 };
 
+async function fetchNoteById(
+  noteId: string,
+  options: { includeContentMarkdown?: boolean } = {}
+): Promise<any> {
+  const body: Record<string, unknown> = {
+    filters: { ids: [noteId] },
+    pagination: { page_size: 1 },
+  };
+
+  if (options.includeContentMarkdown) {
+    body.include = { content_markdown: true };
+  }
+
+  const payload = await call<any>({ method: 'post', url: '/notes', data: body });
+  const notes = payload?.notes?.data ?? payload?.data ?? [];
+  const note = notes.find((n: any) => n?.id === noteId) ?? notes[0];
+  if (!note) {
+    throw new Error(`Note ${noteId} not found`);
+  }
+  return note;
+}
+
 // --------- Tools ---------
 
 server.registerTool(
@@ -139,7 +161,7 @@ server.registerTool(
     inputSchema: getNoteInputSchema,
   },
   async ({ note_id }) => {
-    const note = await call<any>({ method: 'get', url: `/notes/${note_id}` });
+    const note = await fetchNoteById(note_id, { includeContentMarkdown: true });
     return { content: [{ type: 'text', text: JSON.stringify(note, null, 2) }], structuredContent: note };
   }
 );
@@ -178,8 +200,16 @@ server.registerResource(
   new ResourceTemplate('fellow://note/{id}', { list: undefined }),
   { title: 'Fellow Note', description: 'Fetch a note by id as an MCP resource' },
   async (uri, { id }) => {
-    const note = await call<any>({ method: 'get', url: `/notes/${id}` });
-    return { contents: [{ uri: uri.href, text: JSON.stringify(note, null, 2) }] };
+    const noteId = Array.isArray(id) ? id[0] : id;
+    if (!noteId) {
+      throw new Error('Missing note id');
+    }
+    const note = await fetchNoteById(noteId, { includeContentMarkdown: true });
+    const text =
+      typeof note?.content_markdown === 'string' && note.content_markdown.length > 0
+        ? note.content_markdown
+        : JSON.stringify(note, null, 2);
+    return { contents: [{ uri: uri.href, text }] };
   }
 );
 

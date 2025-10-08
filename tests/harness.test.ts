@@ -127,9 +127,11 @@ describe('MCP stdio handshake', () => {
     const templates = await client.listResourceTemplates();
     expect(templates.resourceTemplates.map((tpl) => tpl.name)).toEqual(['fellow-note']);
 
-    requestMock.mockResolvedValueOnce({ data: { id: 'note-1', title: 'Note One' } });
+    requestMock.mockResolvedValueOnce({
+      data: { notes: { data: [{ id: 'note-1', title: 'Note One', content_markdown: '# Note One' }] } },
+    });
     const resource = await client.readResource({ uri: 'fellow://note/note-1' });
-    expect(resource.contents[0]?.text).toContain('Note One');
+    expect(resource.contents[0]?.text).toContain('# Note One');
 
     await client.close();
     await serverModule.server.close();

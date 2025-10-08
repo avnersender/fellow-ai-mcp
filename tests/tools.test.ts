@@ -208,3 +208,40 @@ describe('list_recordings tool', () => {
     }
   });
 });
+
+describe('get_note tool', () => {
+  test('fetches note by id via filtered search', async () => {
+    const tool = getTool('get_note');
+    requestMock.mockResolvedValueOnce({
+      data: {
+        notes: {
+          data: [{ id: 'note-1', title: 'Note One', content_markdown: '# Note One' }],
+        },
+      },
+    });
+
+    const result = await tool.callback({ note_id: 'note-1' });
+
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'post',
+      url: '/notes',
+      data: {
+        filters: { ids: ['note-1'] },
+        pagination: { page_size: 1 },
+        include: { content_markdown: true },
+      },
+    });
+    expect(result.structuredContent).toEqual({
+      id: 'note-1',
+      title: 'Note One',
+      content_markdown: '# Note One',
+    });
+  });
+
+  test('throws when note is missing', async () => {
+    const tool = getTool('get_note');
+    requestMock.mockResolvedValueOnce({ data: { notes: { data: [] } } });
+
+    await expect(tool.callback({ note_id: 'missing' })).rejects.toThrow('Note missing not found');
+  });
+});
