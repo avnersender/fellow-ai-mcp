@@ -1,6 +1,6 @@
 ## Fellow MCP Server
 
-This repository hosts a Model Context Protocol (MCP) server that lets MCP-compatible clients interact with Fellow.ai using a shared toolset defined in `server.ts`.
+This repository hosts a Model Context Protocol (MCP) server that lets MCP-compatible clients interact with Fellow.ai using their [developer API](https://developers.fellow.ai/).
 
 ## Prerequisites
 
@@ -41,17 +41,19 @@ Run the test suite before opening a pull request. The live check exercises the d
 ## MCP Client Configuration Examples
 
 - **Codex CLI (Linux/macOS/WSL)**
+
   ```toml
   [mcp_servers."fellow-ai"]
   command = "npx"
   args = ["-y", "tsx", "/home/<user>/mcp-fellow/server.ts"]
-
+  
   [mcp_servers."fellow-ai".env]
   FELLOW_SUBDOMAIN = "domain_name"
   FELLOW_API_KEY   = "..."
   ```
 
 - **Claude Desktop (Windows + WSL)**
+
   ```json
   {
     "mcpServers": {
@@ -66,9 +68,11 @@ Run the test suite before opening a pull request. The live check exercises the d
     }
   }
   ```
+
   Run `npm run build` inside WSL so `dist/server.js` is available.
 
 - **Claude Desktop (macOS)**
+
   ```json
   {
     "mcpServers": {
